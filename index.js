@@ -11,8 +11,8 @@ const defaultOptions = {
   backgroundColor: 0x000000,
 };
 
-//Pixi.BaseTexture.scaleMode = Pixi.SCALE_MODES.NEAREST;
-//Pixi.settings.SCALE_MODE = Pixi.SCALE_MODES.NEAREST;
+Pixi.BaseTexture.scaleMode = Pixi.SCALE_MODES.NEAREST;
+Pixi.settings.SCALE_MODE = Pixi.SCALE_MODES.NEAREST;
 
 class Game {
 

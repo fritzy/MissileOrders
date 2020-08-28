@@ -29,6 +29,18 @@ class Sprite extends Component {
 
 }
 
+class ParticleEmitter extends Component {
+
+  static properties = {
+    startAngle: 0,
+    endAngle: 0,
+    radius: 10,
+    frequency: 16.66667,
+    frame: '',
+    color: 0xffffff
+  }
+}
+
 class Position extends Component {
 
   static properties = {
@@ -63,7 +75,14 @@ class Explosion extends Component {
   static properties = {
     radius: 0,
     speed: 0,
-    maxRadius: 0
+    maxRadius: 0,
+    circle: null
+  }
+
+  preDestroy() {
+
+    this.circle.destroy();
+    this.circle = null;
   }
 
 }
@@ -82,5 +101,6 @@ module.exports = {
   Vector,
   Game,
   Explode,
-  Explosion
+  Explosion,
+  ParticleEmitter
 };

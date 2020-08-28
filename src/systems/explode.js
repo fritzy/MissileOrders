@@ -1,4 +1,5 @@
 const ApeECS = require('ape-ecs');
+const Pixi = require('pixi.js');
 
 class ExplodeSystem extends ApeECS.System {
 
@@ -28,6 +29,10 @@ class ExplodeSystem extends ApeECS.System {
       const seg = Math.PI * 2 / explode.particles;
       let a = 0;
       let radius = 200;
+      let circle = new Pixi.Graphics();
+      circle.lineStyle({ color: 0xffffff, width: 5 });
+      circle.drawCircle({ radius: 5 });
+      this.gamec.layers.main.addChild(circle);
       const exp = this.world.createEntity({
         components: [
           {
@@ -41,7 +46,8 @@ class ExplodeSystem extends ApeECS.System {
             key: 'explosion',
             type: 'Explosion',
             maxRadius: radius,
-            speed: 3
+            speed: 2,
+            circle: circle
           }
         ]
       });
@@ -49,36 +55,6 @@ class ExplodeSystem extends ApeECS.System {
         exp.addTag('FromPlayer');
         radius = 100
         exp.c.explosion.maxRadius = radius;
-      }
-      for (let i = 0; i < explode.particles; i++) {
-        const p = this.world.createEntity({
-          tags: ['New', 'Particle'],
-          components: [
-            {
-              type: 'Sprite',
-              frame: 'tri',
-              layer: 'main',
-              anchorX: .25,
-              anchorY: .25,
-              color: 0xff5500,
-              scale: 1.5
-            },
-            {
-              type: 'Position',
-              x: position.x,
-              y: position.y,
-              angle: a
-            },
-            {
-              type: 'Vector',
-              angle: a,
-              speed: 3,
-              maxDistance: radius,
-              mangle: Math.random() - .5
-            }
-          ]
-        });
-        a += seg;
       }
       entity.destroy();
     }
@@ -89,12 +65,16 @@ class ExplodeSystem extends ApeECS.System {
     for (const e of explosions) {
       let fromPlayer = e.has('FromPlayer');
       e.c.explosion.radius += e.c.explosion.speed * this.gamec.deltaFrame;
+      e.c.explosion.speed *= (1 + .05 * this.gamec.deltaFrame);
       if (e.c.explosion.radius >= e.c.explosion.maxRadius) {
         e.destroy();
         continue;
       }
       const pos = e.c.position;
       const exp = e.c.explosion;
+      exp.circle.clear();
+      exp.circle.lineStyle({ color: 0xffffff, width: 5 });
+      exp.circle.drawCircle(pos.x, pos.y, exp.radius );
       for (const hittable of hittables) {
         if (fromPlayer && hittable.has('FromPlayer')) continue;
         const pos2 = hittable.getOne('Position');

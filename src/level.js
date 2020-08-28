@@ -5,7 +5,10 @@ const Components = require('./components');
 const SpriteSystem = require('./systems/sprite');
 const MovementSystem = require('./systems/movement');
 const ExplodeSystem = require('./systems/explode');
-const Bloom = require('@pixi/filter-advanced-bloom').AdvancedBloomFilter;
+const CollisionSystem = require('./systems/collide');
+//const Bloom = require('@pixi/filter-advanced-bloom').AdvancedBloomFilter;
+const Filters = require('pixi-filters');
+const Fixtures = require('./fixtures');
 
 class Level extends Scene.Scene {
 
@@ -22,7 +25,10 @@ class Level extends Scene.Scene {
     this.ecs.registerComponent(Components.Game, 1);
     this.ecs.registerComponent(Components.Explode, 5);
     this.ecs.registerComponent(Components.Explosion, 5);
-    this.ecs.registerTags('New', 'Destroy', 'Missile', 'Particle', 'FromPlayer');
+    this.ecs.registerComponent(Components.ParticleEmitter, 5);
+    this.ecs.registerTags('New', 'Destroy', 'Missile', 'Particle', 'FromPlayer', 'Station');
+    this.ecs.registerFixture('missile', Fixtures.makeMissile);
+    this.ecs.registerFixture('station', Fixtures.makeStation);
 
     this.mouse = {
       x: 0,
@@ -40,21 +46,24 @@ class Level extends Scene.Scene {
     canvas.addEventListener('mousedown', (e) => {
       this.mouse.buttons[e.which] = true;
       this.mouse.down = true;
-      console.log(this.mouse);
+      e.preventDefault();
+      return false;
+    });
+    window.addEventListener('contextmenu', (e) => {
+      console.log('no');
+      e.preventDefault();
+      return false;
     });
     canvas.addEventListener('mouseup', (e) => {
       this.mouse.buttons[e.which] = false;
     });
 
+    /*
     this.filters = [
-      new Bloom({
-        threshold: 1,
-        bloomScale: 1,
-        brightness: 1,
-        blur: 8,
-        quality: 4
+      new Filters.CRTFilter({
       }),
     ];
+    */
 
     const gentity = this.ecs.createEntity({
       id: 'gentity',
@@ -75,6 +84,7 @@ class Level extends Scene.Scene {
 
     this.ecs.registerSystem('everyframe', MovementSystem);
     this.ecs.registerSystem('everyframe', SpriteSystem);
+    this.ecs.registerSystem('everyframe', CollisionSystem);
     this.ecs.registerSystem('everyframe', ExplodeSystem);
 
     this.gentity = null;
@@ -82,69 +92,16 @@ class Level extends Scene.Scene {
 
   async standUp() {
 
-
     this.lastShot = 0;
-  }
-
-  makeMissile(fromPlayer) {
-
-    let a;
-    let x;
-    let y;
-    let dist;
-    let speed;
-    let color;
-    if (fromPlayer) {
-      const dx = this.mouse.x - this.gamec.width / 2;
-      const dy = this.mouse.y - this.gamec.height;
-      dist = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-      a = Math.atan2(dy, dx);
-      x = this.gamec.width/2,
-      y = this.gamec.height,
-      this.mouse.down = false;
-      speed = 10;
-      color = 0xaaffaa;
-    } else {
-      x = Math.random() * this.gamec.width;
-      y = 0;
-      const x2 = Math.random() * this.gamec.width;
-      const y2 = this.gamec.height;
-      const dx = x2 - x;
-      const dy = y2 - y;
-      dist = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-      a = Math.atan2(dy, dx);
-      speed = 2;
-      color = 0xffaaaa;
-    }
-    const entity = this.ecs.createEntity({
-      tags: ['New', 'Missile'],
-      components: [
-        {
-          type: 'Sprite',
-          frame: 'missile',
-          container: this,
-          scale: 2.5,
-          color: color
-        },
-        {
-          type: 'Position',
-          x,
-          y,
-          angle: a
-        },
-        {
-          type: 'Vector',
-          angle: a,
-          speed,
-          maxDistance: dist,
-          mangle: 0
-        }
-      ]
-    });
-    if (fromPlayer) {
-      entity.addTag('FromPlayer');
+    const stations = 10;
+    const seg = this.gamec.width / stations;
+    let x = 0;
+    for (let i = 0; i < stations - 1; i++) {
+      x += seg;
+      this.ecs.fixtures.station(x, this.gamec);
     }
   }
+
 
   updateMouse(e) {
 
@@ -163,10 +120,10 @@ class Level extends Scene.Scene {
     this.lastShot += dt;
     if (this.lastShot >= 1500) {
       this.lastShot %= 1500;
-      this.makeMissile(false);
+      this.ecs.fixtures.missile(false, this.gamec, this.mouse);
     }
     this.ecs.tick();
-    if (this.mouse.down) this.makeMissile(true);
+    if (this.mouse.down) this.ecs.fixtures.missile(true, this.gamec, this.mouse);
     this.ecs.runSystems('everyframe');
 
   }
