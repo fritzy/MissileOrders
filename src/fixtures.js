@@ -1,6 +1,14 @@
+// This is the Fixtures file. These fixtures create entities
+// in a reproducible way.  This ensures that there is a
+// uniform structure for entities create here
+
+
 module.exports = function (world) {
 
   return {
+    // Makes a station Entity
+    // The station entity has two componentsn and two tags
+    // the New tag is stripped by the sprite system after the first update
     makeStation(x, game) {
 
       const entity = world.createEntity({
@@ -25,6 +33,10 @@ module.exports = function (world) {
 
     },
 
+    // Makes a missle, either from the player
+    // or from the aliens.  The mouse argument
+    // is only required when calliung with fromPlayer
+    // This Entity created has (two or three) tags and three components.
     makeMissile(fromPlayer, game, mouse) {
 
       let a;

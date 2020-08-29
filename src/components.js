@@ -1,3 +1,5 @@
+// This file has all of the components used
+
 const ApeECS = require('ape-ecs');
 const Component = ApeECS.Component;
 const Pixi = require('pixi.js');
