@@ -1,3 +1,7 @@
+// This is the level file
+// This takes care of building the Ape ECS World as
+// well as setting up the Pixi library
+
 const Pixi = require('pixi.js');
 const Scene = require('./scene');
 const ApeECS = require('ape-ecs');
@@ -19,6 +23,9 @@ class Level extends Scene.Scene {
 
     this.bg = Pixi.Sprite.from('space');
     this.addChild(this.bg);
+
+    // Ape ECS Setup begins here
+    // The world constructor is followed by registering all of the components used
     this.ecs = new ApeECS.World();
     this.ecs.registerComponent(Components.Sprite, 10);
     this.ecs.registerComponent(Components.Position, 10);
@@ -27,9 +34,15 @@ class Level extends Scene.Scene {
     this.ecs.registerComponent(Components.Explode, 5);
     this.ecs.registerComponent(Components.Explosion, 5);
     this.ecs.registerComponent(Components.ParticleEmitter, 5);
+
+    // Tags are registred, note the names of these tags must not collide with the components above
     this.ecs.registerTags('New', 'Destroy', 'Missile', 'Particle', 'FromPlayer', 'Station', 'ToHit');
+
+    // This is a convenience which allows uniform Entities
     this.fixtures = Fixtures(this.ecs);
 
+    // This is an object that is outside of Ape ECS which is used to collect mouse state
+    // from the browser
     this.mouse = {
       x: 0,
       y: 0,
@@ -65,6 +78,10 @@ class Level extends Scene.Scene {
     ];
     */
 
+    // The Global entity.  We pass the 'id'
+    // tag so that we can always reference this entity by the
+    // id at a later date
+    // This entity has one component, called Game
     const gentity = this.ecs.createEntity({
       id: 'gentity',
       components: [
@@ -79,9 +96,16 @@ class Level extends Scene.Scene {
         }
       ]
     });
+
+    // We take a reference to the game component which exists
+    // on the entity we just created above
     this.gamec = gentity.c.game;
 
-
+    // We register all of the systems we will use by giving them
+    // a string 'group' name and the Class for the system.
+    // In this example we all register them to the 'everyframe' group.
+    // If want finer control of which systems run, create more
+    // groups and then call runSystems() as desired.
     this.ecs.registerSystem('everyframe', MovementSystem);
     this.ecs.registerSystem('everyframe', SpriteSystem);
     this.ecs.registerSystem('everyframe', CollisionSystem);
@@ -114,12 +138,18 @@ class Level extends Scene.Scene {
   tearDown() {
   }
 
+  // Update function
+  // dt is the number of seconds between frames (a floating point number less than 1)
+  // df is the number of frames between calls (a floating point number near 1)
+  // This is the main update function which updates the APE ECS state as well as 
+  // this is called by update() in index.js. (requestAnimationFrame)
   update(dt, df, time) {
-
     this.lastFrame += dt;
     this.gamec.deltaTime = dt;
     this.gamec.deltaFrame = df;
     this.lastShot += dt;
+
+    // Fire another alien missle if the time has passed
     if (this.lastShot >= 1300) {
       this.lastShot %= 1300;
       this.fixtures.makeMissile(false, this.gamec, this.mouse);
@@ -175,8 +205,16 @@ class Level extends Scene.Scene {
       this.fixtures.makeMissile(true, this.gamec, { x: ex, y: ey });
 
     }
+
+    // Call Ape ECS tick().  This updates persisted queries as well as other internal values
+    // This also increments this.ecs.currentTick
     this.ecs.tick();
+
+    // Take mouse input and potentially fire a player missle
     if (this.mouse.down) this.fixtures.makeMissile(true, this.gamec, this.mouse);
+
+    // Run all systems in the 'everyframe' group
+    // There are no systems outside this group in this example
     this.ecs.runSystems('everyframe');
 
   }
