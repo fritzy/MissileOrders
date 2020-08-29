@@ -9,6 +9,7 @@ const CollisionSystem = require('./systems/collide');
 //const Bloom = require('@pixi/filter-advanced-bloom').AdvancedBloomFilter;
 const Filters = require('pixi-filters');
 const Fixtures = require('./fixtures');
+const Util = require('./util');
 
 class Level extends Scene.Scene {
 
@@ -26,9 +27,8 @@ class Level extends Scene.Scene {
     this.ecs.registerComponent(Components.Explode, 5);
     this.ecs.registerComponent(Components.Explosion, 5);
     this.ecs.registerComponent(Components.ParticleEmitter, 5);
-    this.ecs.registerTags('New', 'Destroy', 'Missile', 'Particle', 'FromPlayer', 'Station');
-    this.ecs.registerFixture('missile', Fixtures.makeMissile);
-    this.ecs.registerFixture('station', Fixtures.makeStation);
+    this.ecs.registerTags('New', 'Destroy', 'Missile', 'Particle', 'FromPlayer', 'Station', 'ToHit');
+    this.fixtures = Fixtures(this.ecs);
 
     this.mouse = {
       x: 0,
@@ -88,18 +88,20 @@ class Level extends Scene.Scene {
     this.ecs.registerSystem('everyframe', ExplodeSystem);
 
     this.gentity = null;
-  }
-
-  async standUp() {
 
     this.lastShot = 0;
+    this.lastDef = 0;
     const stations = 10;
     const seg = this.gamec.width / stations;
     let x = 0;
     for (let i = 0; i < stations - 1; i++) {
       x += seg;
-      this.ecs.fixtures.station(x, this.gamec);
+      this.fixtures.makeStation(x, this.gamec);
     }
+  }
+
+  standUp() {
+
   }
 
 
@@ -118,12 +120,63 @@ class Level extends Scene.Scene {
     this.gamec.deltaTime = dt;
     this.gamec.deltaFrame = df;
     this.lastShot += dt;
-    if (this.lastShot >= 1500) {
-      this.lastShot %= 1500;
-      this.ecs.fixtures.missile(false, this.gamec, this.mouse);
+    if (this.lastShot >= 1300) {
+      this.lastShot %= 1300;
+      this.fixtures.makeMissile(false, this.gamec, this.mouse);
+    }
+    this.lastDef += dt;
+    if (this.lastDef >= 1500) {
+      const Vector = Util.Vector;
+      this.lastDef %= 1500;
+      const q1 = this.ecs.createQuery().fromAll('Missile', 'Position', 'Vector').not('FromPlayer', 'ToHit');
+      let missiles = [...q1.execute()];
+      missiles = missiles.sort((a, b) => {
+        const aP = a.getOne('Position');
+        const bP = b.getOne('Position');
+        return bP.y - aP.y;
+      });
+      //const target = missiles[missiles.length - 1];
+      const target = missiles[0];
+      target.addTag('ToHit');
+      const tpc = target.getOne('Position');
+      const targetPos = new Util.Vector(tpc.x, tpc.y);
+      const tvc = target.getOne('Vector');
+      const targetVec = new Util.Vector(Math.cos(tvc.angle) * tvc.speed, Math.sin(tvc.angle) * tvc.speed);
+      const [vx, vy] = targetVec.components;
+
+      const towerPos = new Util.Vector(this.gamec.width / 2, this.gamec.height);
+      const towerX = this.gamec.width / 2;
+      const towerY = this.gamec.height;
+      const toTarget = targetPos.diff(towerPos);
+      // a = Vector.Dot(target.velocity, target.velocity) - (bullet.velocity * bullet.velocity)
+      const a = Math.pow(vx, 2) + Math.pow(vy, 2) - Math.pow(10, 2);
+      //const a = Vector.Dot(targetVec, targetVec) - (10 * 10);
+      //    b = 2 * Vector.Dot(target.velocity, totarget);
+      //const b = 2 * Vector.Dot(targetVec, toTarget);
+      const b = 2 * (vx * (tpc.x - towerX) + vy * (tpc.y - towerY))
+      //const b = 2 * targetVec.dot(toTarget);
+      //    c = Vector.Dot(totarget, totarget);
+      const c = Math.pow(tpc.x - towerX, 2) + Math.pow(tpc.y - towerY, 2);
+      const disc = Math.pow(b, 2) - 4 * a * c
+      const t = Math.abs((-b - Math.sqrt(disc)) / (2 * a)) * 1.1;
+      //const c = Vector.Dot(toTarget, toTarget);
+      //const c = toTarget.dot(toTarget);
+      console.log('a', a, 'b', b, 'c', c);
+      //    p = -b / (2 * a);
+      //const p = -b / (2 * a);
+      //    q = Math.Sqrt((b * b) - 4 * a * c) / (2 * a);
+      //const q = Math.sqrt((b * b) - 4 * a * c) / (2 * a);
+      //const t = Math.abs(p - q);// * 0.53;
+      console.log('t', t);
+
+      const ex = tpc.x + (vx * t);
+      const ey = tpc.y + (vy * t);
+      const angle = Math.atan2(this.gamec.height - ey, this.gamec.width / 2 - ex)
+      this.fixtures.makeMissile(true, this.gamec, { x: ex, y: ey });
+
     }
     this.ecs.tick();
-    if (this.mouse.down) this.ecs.fixtures.missile(true, this.gamec, this.mouse);
+    if (this.mouse.down) this.fixtures.makeMissile(true, this.gamec, this.mouse);
     this.ecs.runSystems('everyframe');
 
   }

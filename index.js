@@ -25,15 +25,19 @@ class Game {
     this.options.container.appendChild(this.renderer.view);
     this.stage = new Pixi.Container();
 
-    Load.load().then(async () => {
-
-      console.log('loaded', this.options.width, this.options.height, this.options.container);
-      this.scenes = new Scene.Manager(this, this.stage);
-      this.map = new Level(this);
-      await this.scenes.addScene('map', this.map);
-      this.update(0);
-    });
+    this.start();
     this.lastTime = 0;
+  }
+
+  async start() {
+    await Load.load();
+    console.log('loaded', this.options.width, this.options.height, this.options.container);
+    this.scenes = new Scene.Manager(this, this.stage);
+    this.map = new Level(this);
+    this.scenes.addScene('map', this.map);
+    //this.update(0);
+    window.requestAnimationFrame(this.update.bind(this));
+    return Promise.resolve();
   }
 
   update(time) {

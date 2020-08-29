@@ -21,6 +21,7 @@
   "dependencies": {
     "@pixi/filter-advanced-bloom": "^3.1.1",
     "@tweenjs/tween.js": "^18.6.0",
+    "ape-ecs": "^0.9.0",
     "pixi-filters": "^3.1.1",
     "pixi.js": "^5.3.3"
   }

@@ -14,7 +14,7 @@ const loadTexture = (name) => {
 };
 
 
-const load = () => {
+const load = async () => {
 
   return new Promise((resolve, reject) => {
 
